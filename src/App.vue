@@ -1,11 +1,16 @@
 <script setup lang="ts">
 import { reactive, watch } from "vue";
 import { Solar, SolarMonth, SolarWeek, HolidayUtil } from "lunar-typescript";
-import { NSelect } from 'naive-ui'
+import { NSelect, NBadge } from "naive-ui";
 const now = Solar.fromDate(new Date());
-const years : { value:number,label:string }[] = [];
+const years: { value: number; label: string }[] = [];
 for (let i = 1900; i < 2051; i++) {
-  years.push({value:i,label:i+'年'});
+  years.push({ value: i, label: i + "年" });
+}
+
+const months: { value: number; label: string }[] = [];
+for (let i = 1; i < 12; i++) {
+  months.push({ value: i, label: i + "月" });
 }
 
 class Day {
@@ -38,8 +43,8 @@ class Month {
 }
 
 class Holiday {
-  public name: string = "";
-  public month: number = 0;
+  public label: string = "";
+  public value: number = 0;
 }
 
 const state = reactive({
@@ -115,8 +120,8 @@ function render() {
   const month = new Month();
   const weeks: SolarWeek[] = [];
   const solarWeeks = SolarMonth.fromYm(
-      parseInt(state.year + "", 10),
-      parseInt(state.month + "", 10)
+    parseInt(state.year + "", 10),
+    parseInt(state.month + "", 10)
   ).getWeeks(state.weekStart);
   solarWeeks.forEach((w) => {
     weeks.push(w);
@@ -138,16 +143,16 @@ function render() {
   const holidays: Holiday[] = [];
   HolidayUtil.getHolidays(state.year).forEach((h) => {
     const holiday = new Holiday();
-    holiday.name = h.getName();
-    holiday.month = parseInt(h.getTarget().substring(5, 7), 10);
+    holiday.label = h.getName();
+    holiday.value = parseInt(h.getTarget().substring(5, 7), 10);
     const exists = holidays.some((a) => {
-      return a.name == holiday.name;
+      return a.label == holiday.label;
     });
     if (!exists) {
       holidays.push(holiday);
     }
   });
-  state.holidays = holidays;
+  state.holidays = [{ label: "假期安排", value: 0 }].concat(holidays);
 }
 
 function onSelect(day: Day) {
@@ -164,35 +169,35 @@ function onBack() {
 render();
 
 watch(
-    () => state.year,
-    () => {
-      render();
-    }
+  () => state.year,
+  () => {
+    render();
+  }
 );
 
 watch(
-    () => state.month,
-    () => {
-      render();
-    }
+  () => state.month,
+  () => {
+    render();
+  }
 );
 
 watch(
-    () => state.selected,
-    () => {
-      render();
-    }
+  () => state.selected,
+  () => {
+    render();
+  }
 );
 
 watch(
-    () => state.holidayMonth,
-    (newVal) => {
-      const month = parseInt(newVal + "", 10);
-      if (month > 0) {
-        state.month = month;
-        render();
-      }
+  () => state.holidayMonth,
+  (newVal) => {
+    const month = parseInt(newVal + "", 10);
+    if (month > 0) {
+      state.month = month;
+      render();
     }
+  }
 );
 </script>
 
@@ -200,36 +205,31 @@ watch(
   <div class="calendar">
     <div class="container">
       <div class="bar">
-        <div>
-          <n-select v-model:value="state.year" :options="years" />
-        </div>
-        <div>
-          <select v-model="state.month">
-            <option :value="i" v-for="i in 12">{{ i }}月</option>
-          </select>
-        </div>
-        <div>
-          <select v-model="state.holidayMonth">
-            <option value="0">假期安排</option>
-            <option :value="h.month" v-for="h in state.holidays">
-              {{ h.name }}
-            </option>
-          </select>
-        </div>
+        <n-select
+          v-model:value="state.holidayMonth"
+          :options="state.holidays"
+        />
+        <n-select v-model:value="state.year" :options="years" />
+        <n-select v-model:value="state.month" :options="months" />
         <div>
           <div class="button" @click="onBack">返回今天</div>
         </div>
       </div>
       <ul class="head">
-        <li v-for="head in state.data.heads">{{ head }}</li>
+        <li
+          v-for="head in state.data.heads"
+          :class="{ 'color-red': ['六', '日'].includes(head) }"
+        >
+          {{ head }}
+        </li>
       </ul>
       <ul class="body">
         <li v-for="week in state.data.weeks">
           <ol>
             <li
-                @click="onSelect(day)"
-                v-for="day in week.days"
-                :class="{
+              @click="onSelect(day)"
+              v-for="day in week.days"
+              :class="{
                 today: day.isToday,
                 selected: day.isSelected,
                 other: day.month != state.month,
@@ -237,11 +237,13 @@ watch(
                 holiday: day.isHoliday,
               }"
             >
-              <div class="inner">
-                <b>{{ day.day }}</b>
-                <i>{{ day.desc }}</i>
-                <u v-if="day.isHoliday">{{ day.isRest ? "休" : "班" }}</u>
-              </div>
+              <n-badge value="今" :show="day.isToday">
+                <div class="inner">
+                  <b>{{ day.day }}</b>
+                  <i>{{ day.desc }}</i>
+                  <u v-if="day.isHoliday">{{ day.isRest ? "休" : "班" }}</u>
+                </div>
+              </n-badge>
             </li>
           </ol>
         </li>
@@ -360,6 +362,10 @@ watch(
         width: 64px;
         height: 36px;
         font-size: 13px;
+        color: #333;
+        &.color-red {
+          color: #f11;
+        }
       }
     }
 
@@ -372,7 +378,9 @@ watch(
           height: 60px;
           padding: 2px;
           cursor: pointer;
-
+          .n-badge {
+            display: block;
+          }
           div.inner {
             padding: 4px;
             border-radius: 6px;
@@ -449,6 +457,11 @@ watch(
         li.today {
           div.inner {
             border: 2px solid #4e6ef2 !important;
+            background: #4e6ef2;
+            b,
+            i {
+              color: #fff;
+            }
           }
         }
       }
