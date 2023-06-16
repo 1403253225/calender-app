@@ -1,0 +1,11 @@
+{
+  "name": "calender-app",
+  "uuid": "0daa3b53-c66f-4a8d-8e19-604d5e47105a",
+  "debug": {
+    "entry": "http://localhost:5173",
+    "resource": "public"
+  },
+  "build": {
+    "resource": "dist"
+  }
+}
